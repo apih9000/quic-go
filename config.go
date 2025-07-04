@@ -5,8 +5,15 @@ import (
 	"time"
 
 	"github.com/quic-go/quic-go/internal/protocol"
+	"github.com/quic-go/quic-go/internal/wire"
 	"github.com/quic-go/quic-go/quicvarint"
 )
+
+// CustomTransportParameters allows setting custom transport parameters for the client handshake
+// Key: parameter ID, Value: parameter bytes
+// Only used on client side
+var CustomTransportParameters map[uint64][]byte
+
 
 // Clone clones a Config.
 func (c *Config) Clone() *Config {
@@ -56,6 +63,12 @@ func validateConfig(config *Config) error {
 
 // populateConfig populates fields in the quic.Config with their default values, if none are set
 // it may be called with nil
+func setCustomTransportParameters(cfg *Config) {
+	if cfg != nil && cfg.CustomTransportParameters != nil {
+		wire.AdditionalTransportParametersClient = cfg.CustomTransportParameters
+	}
+}
+
 func populateConfig(config *Config) *Config {
 	if config == nil {
 		config = &Config{}
