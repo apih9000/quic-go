@@ -729,6 +729,11 @@ func (c *Conn) ConnectionState() ConnectionState {
 	c.connState.Used0RTT = cs.Used0RTT
 	c.connState.SupportsStreamResetPartialDelivery = c.peerParams.EnableResetStreamAt
 	c.connState.GSO = c.conn.capabilities().GSO
+	if c.peerParams != nil {
+		c.connState.TransportParameters = c.peerParams.ToRawMap()
+	} else {
+		c.connState.TransportParameters = nil
+	}
 	return c.connState
 }
 

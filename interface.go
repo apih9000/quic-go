@@ -101,6 +101,8 @@ type ConnectionIDGenerator interface {
 
 // Config contains all configuration data needed for a QUIC server or client.
 type Config struct {
+	// CustomTransportParameters allows the user to specify custom QUIC transport parameters.
+	CustomTransportParameters map[uint64][]byte
 	// GetConfigForClient is called for incoming connections.
 	// If the error is not nil, the connection attempt is refused.
 	GetConfigForClient func(info *ClientInfo) (*Config, error)
@@ -203,6 +205,7 @@ type ClientInfo struct {
 
 // ConnectionState records basic details about a QUIC connection.
 type ConnectionState struct {
+	TransportParameters map[uint64][]byte
 	// TLS contains information about the TLS connection state, incl. the tls.ConnectionState.
 	TLS tls.ConnectionState
 	// SupportsDatagrams indicates whether the peer advertised support for QUIC datagrams (RFC 9221).

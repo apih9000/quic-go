@@ -58,6 +58,9 @@ type PreferredAddress struct {
 
 // TransportParameters are parameters sent to the peer during the handshake
 type TransportParameters struct {
+	// RawParameters holds all received transport parameters (including custom/unknown ones)
+	RawParameters map[uint64][]byte
+
 	InitialMaxStreamDataBidiLocal  protocol.ByteCount
 	InitialMaxStreamDataBidiRemote protocol.ByteCount
 	InitialMaxStreamDataUni        protocol.ByteCount
@@ -113,6 +116,9 @@ func (p *TransportParameters) unmarshal(b []byte, sentBy protocol.Perspective, f
 	p.MaxAckDelay = protocol.DefaultMaxAckDelay
 	p.MaxDatagramFrameSize = protocol.InvalidByteCount
 
+	if p.RawParameters == nil {
+		p.RawParameters = make(map[uint64][]byte)
+	}
 	for len(b) > 0 {
 		paramIDInt, l, err := quicvarint.Parse(b)
 		if err != nil {
@@ -129,6 +135,7 @@ func (p *TransportParameters) unmarshal(b []byte, sentBy protocol.Perspective, f
 			return fmt.Errorf("remaining length (%d) smaller than parameter length (%d)", len(b), paramLen)
 		}
 		parameterIDs = append(parameterIDs, paramID)
+		p.RawParameters[uint64(paramID)] = b[:paramLen]
 		switch paramID {
 		case activeConnectionIDLimitParameterID:
 			readActiveConnectionIDLimit = true
@@ -446,6 +453,7 @@ func (p *TransportParameters) Marshal(pers protocol.Perspective) []byte {
 		b = quicvarint.Append(b, 0)
 	}
 
+	// Add custom transport parameters from the config if present
 	if pers == protocol.PerspectiveClient && len(AdditionalTransportParametersClient) > 0 {
 		for k, v := range AdditionalTransportParametersClient {
 			b = quicvarint.Append(b, k)
@@ -453,7 +461,6 @@ func (p *TransportParameters) Marshal(pers protocol.Perspective) []byte {
 			b = append(b, v...)
 		}
 	}
-
 
 	return b
 }
@@ -540,6 +547,14 @@ func (p *TransportParameters) ValidForUpdate(saved *TransportParameters) bool {
 		p.InitialMaxStreamDataUni >= saved.InitialMaxStreamDataUni &&
 		p.MaxBidiStreamNum >= saved.MaxBidiStreamNum &&
 		p.MaxUniStreamNum >= saved.MaxUniStreamNum
+}
+
+// ToRawMap returns all received transport parameters as a map[uint64][]byte.
+func (p *TransportParameters) ToRawMap() map[uint64][]byte {
+	if p.RawParameters != nil {
+		return p.RawParameters
+	}
+	return map[uint64][]byte{}
 }
 
 // String returns a string representation, intended for logging.
